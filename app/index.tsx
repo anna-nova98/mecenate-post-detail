@@ -7,12 +7,14 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { useRouter, useNavigation } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { usePosts } from '../src/api/posts';
 import { PostCard } from '../src/components/PostCard';
 import { TabFilter, type FilterTab } from '../src/components/TabFilter';
 import { SkeletonCard } from '../src/components/SkeletonCard';
 import { LiveDot } from '../src/components/LiveDot';
+import { ErrorView } from '../src/components/ErrorView';
 import { colors, spacing, typography } from '../src/theme/tokens';
 import type { Post } from '../src/types/api';
 
@@ -22,13 +24,19 @@ export default function FeedScreen() {
   const [filter, setFilter] = useState<FilterTab>('all');
 
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => <LiveDot />,
-    });
+    navigation.setOptions({ headerRight: () => <LiveDot /> });
   }, [navigation]);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch, isRefetching } =
-    usePosts(filter);
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+  } = usePosts(filter);
 
   const posts = data?.pages.flatMap((p) => p.posts) ?? [];
 
@@ -43,14 +51,12 @@ export default function FeedScreen() {
     [router]
   );
 
-  const renderFooter = () => {
-    if (!isFetchingNextPage) return null;
-    return (
+  const renderFooter = () =>
+    isFetchingNextPage ? (
       <View style={styles.footer}>
         <ActivityIndicator color={colors.primary} />
       </View>
-    );
-  };
+    ) : null;
 
   if (isLoading) {
     return (
@@ -66,14 +72,7 @@ export default function FeedScreen() {
   }
 
   if (isError) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>Не удалось загрузить ленту</Text>
-        <Text style={styles.retryText} onPress={() => refetch()}>
-          Повторить
-        </Text>
-      </View>
-    );
+    return <ErrorView message="Не удалось загрузить ленту" onRetry={refetch} />;
   }
 
   return (
@@ -81,11 +80,9 @@ export default function FeedScreen() {
       data={posts}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-      ListHeaderComponent={
-        <TabFilter active={filter} onChange={(t) => setFilter(t)} />
-      }
+      ListHeaderComponent={<TabFilter active={filter} onChange={setFilter} />}
       ListEmptyComponent={
-        <View style={styles.center}>
+        <View style={styles.empty}>
           <Text style={styles.emptyText}>Публикаций нет</Text>
         </View>
       }
@@ -110,24 +107,13 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.xxxl,
   },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-    gap: spacing.md,
-  },
   footer: {
     paddingVertical: spacing.xl,
     alignItems: 'center',
   },
-  errorText: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  retryText: {
-    ...typography.label,
-    color: colors.primary,
+  empty: {
+    alignItems: 'center',
+    paddingTop: 80,
   },
   emptyText: {
     ...typography.body,

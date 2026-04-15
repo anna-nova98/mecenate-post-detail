@@ -52,6 +52,7 @@ export default function RootLayout() {
           name="post/[id]"
           options={{ title: '', headerBackTitle: 'Лента' }}
         />
+        <Stack.Screen name="+not-found" />
       </Stack>
     </QueryClientProvider>
   );
