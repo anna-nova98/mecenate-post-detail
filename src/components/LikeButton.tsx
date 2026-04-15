@@ -5,9 +5,10 @@ import Animated, {
   useAnimatedStyle,
   withSequence,
   withSpring,
-  withTiming,
   FadeInDown,
+  FadeInUp,
   FadeOutUp,
+  FadeOutDown,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing, radius, typography } from '../theme/tokens';
@@ -22,11 +23,9 @@ interface Props {
 export function LikeButton({ isLiked, likesCount, onPress, disabled }: Props) {
   const scale = useSharedValue(1);
   const prevCountRef = useRef(likesCount);
-  const prevCount = prevCountRef.current;
-  const countChanged = prevCount !== likesCount;
-  const countIncreased = likesCount > prevCount;
+  const countIncreased = likesCount > prevCountRef.current;
+  const countChanged = prevCountRef.current !== likesCount;
 
-  // Track previous count for animation direction
   useEffect(() => {
     prevCountRef.current = likesCount;
   }, [likesCount]);
@@ -59,16 +58,20 @@ export function LikeButton({ isLiked, likesCount, onPress, disabled }: Props) {
         {isLiked ? '❤️' : '🤍'}
       </Animated.Text>
 
-      {/* Animated number ticker */}
+      {/* Directional number ticker: slides up when count increases, down when it decreases */}
       <View style={styles.countContainer}>
         <Animated.Text
           key={likesCount}
           entering={
             countChanged
-              ? FadeInDown.duration(200).springify()
+              ? (countIncreased ? FadeInDown : FadeInUp).duration(200).springify()
               : undefined
           }
-          exiting={FadeOutUp.duration(150)}
+          exiting={
+            countChanged
+              ? (countIncreased ? FadeOutUp : FadeOutDown).duration(150)
+              : undefined
+          }
           style={[styles.count, isLiked && styles.countActive]}
         >
           {formatCount(likesCount)}

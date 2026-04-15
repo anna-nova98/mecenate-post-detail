@@ -5,7 +5,8 @@ import { wsStatusStore } from '../stores/wsStatusStore';
 import type { WsEvent, Post } from '../types/api';
 
 const WS_URL = process.env.EXPO_PUBLIC_WS_URL ?? 'wss://k8s.mectest.ru/test-app/ws';
-const RECONNECT_DELAY = 3000;
+const RECONNECT_DELAY_BASE = 2000;
+const MAX_RECONNECT_DELAY = 30_000;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
 class WsService {
@@ -150,7 +151,10 @@ class WsService {
     if (this.attempts >= MAX_RECONNECT_ATTEMPTS) return;
     this.attempts++;
     this._clearTimer();
-    this.reconnectTimer = setTimeout(() => this._open(), RECONNECT_DELAY);
+    // Exponential backoff: 2s, 4s, 8s, 16s … capped at 30s
+    const delay = Math.min(RECONNECT_DELAY_BASE * 2 ** (this.attempts - 1), MAX_RECONNECT_DELAY);
+    console.log(`[WS] Reconnecting in ${delay}ms (attempt ${this.attempts})`);
+    this.reconnectTimer = setTimeout(() => this._open(), delay);
   }
 
   private _clearTimer() {
