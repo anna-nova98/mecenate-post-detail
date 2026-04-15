@@ -98,6 +98,10 @@ export default function FeedScreen() {
       }
       contentContainerStyle={styles.list}
       showsVerticalScrollIndicator={false}
+      windowSize={5}
+      maxToRenderPerBatch={5}
+      initialNumToRender={6}
+      removeClippedSubviews
     />
   );
 }

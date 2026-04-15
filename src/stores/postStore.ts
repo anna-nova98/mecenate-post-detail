@@ -18,6 +18,7 @@ class PostStore {
 
   updateLikes = action((postId: string, likesCount: number) => {
     const current = this.liveStates.get(postId);
+    // Preserve existing isLiked; if no state yet, we can't know — keep false as default
     this.liveStates.set(postId, {
       likesCount,
       isLiked: current?.isLiked ?? false,

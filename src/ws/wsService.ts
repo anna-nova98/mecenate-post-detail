@@ -1,7 +1,8 @@
 import { AppState, type AppStateStatus } from 'react-native';
+import type { QueryClient } from '@tanstack/react-query';
 import { postStore } from '../stores/postStore';
 import { wsStatusStore } from '../stores/wsStatusStore';
-import type { WsEvent } from '../types/api';
+import type { WsEvent, Post } from '../types/api';
 
 const WS_URL = process.env.EXPO_PUBLIC_WS_URL ?? 'wss://k8s.mectest.ru/test-app/ws';
 const RECONNECT_DELAY = 3000;
@@ -10,13 +11,15 @@ const MAX_RECONNECT_ATTEMPTS = 10;
 class WsService {
   private ws: WebSocket | null = null;
   private token: string = '';
+  private qc: QueryClient | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private attempts = 0;
   private shouldConnect = false;
   private appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
 
-  connect(token: string) {
+  connect(token: string, queryClient: QueryClient) {
     this.token = token;
+    this.qc = queryClient;
     this.shouldConnect = true;
     this.attempts = 0;
     this._open();
@@ -41,7 +44,6 @@ class WsService {
       'change',
       (state: AppStateStatus) => {
         if (state === 'active') {
-          // Reconnect if socket is dead
           if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
             this.attempts = 0;
             this._open();
@@ -77,11 +79,23 @@ class WsService {
     try {
       const event: WsEvent = JSON.parse(raw);
       if (event.type === 'ping') return;
+
       if (event.type === 'like_updated') {
+        // Update MobX store (post detail real-time)
         postStore.updateLikes(event.postId, event.likesCount);
+        // Also patch the React Query cache so feed cards update
+        this.qc?.setQueryData<Post>(['post', event.postId], (old) =>
+          old ? { ...old, likesCount: event.likesCount } : old
+        );
       }
+
       if (event.type === 'comment_added') {
+        // Update MobX store (post detail real-time)
         postStore.prependComment(event.postId, event.comment);
+        // Bump commentsCount in the post cache
+        this.qc?.setQueryData<Post>(['post', event.postId], (old) =>
+          old ? { ...old, commentsCount: old.commentsCount + 1 } : old
+        );
       }
     } catch {
       // ignore malformed messages

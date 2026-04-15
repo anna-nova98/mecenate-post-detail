@@ -21,7 +21,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     authStore.init().then(() => {
-      wsService.connect(authStore.token);
+      wsService.connect(authStore.token, queryClient);
       setReady(true);
     });
     return () => wsService.disconnect();

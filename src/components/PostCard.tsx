@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { observer } from 'mobx-react-lite';
 import { Avatar } from './Avatar';
 import { TierBadge } from './TierBadge';
+import { postStore } from '../stores/postStore';
 import { colors, spacing, radius, typography, shadows } from '../theme/tokens';
 import type { Post } from '../types/api';
 
@@ -10,7 +12,11 @@ interface Props {
   onPress: () => void;
 }
 
-export function PostCard({ post, onPress }: Props) {
+export const PostCard = observer(function PostCard({ post, onPress }: Props) {
+  const liveState = postStore.getLiveState(post.id);
+  const likesCount = liveState?.likesCount ?? post.likesCount;
+  const liveCommentCount =
+    post.commentsCount + postStore.getLiveComments(post.id).length;
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       {/* Cover */}
@@ -50,13 +56,13 @@ export function PostCard({ post, onPress }: Props) {
 
         {/* Stats */}
         <View style={styles.stats}>
-          <Text style={styles.stat}>♥ {post.likesCount}</Text>
-          <Text style={styles.stat}>💬 {post.commentsCount}</Text>
+          <Text style={styles.stat}>♥ {likesCount}</Text>
+          <Text style={styles.stat}>💬 {liveCommentCount}</Text>
         </View>
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 function formatDate(iso: string) {
   const d = new Date(iso);

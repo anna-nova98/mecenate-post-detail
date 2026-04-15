@@ -211,6 +211,9 @@ const PostDetailScreen = observer(() => {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        windowSize={5}
+        maxToRenderPerBatch={10}
+        initialNumToRender={10}
       />
       <CommentInput onSubmit={handleAddComment} />
     </View>

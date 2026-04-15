@@ -92,7 +92,11 @@ export function useAddComment(postId: string) {
       return res.data.data.comment;
     },
     onSuccess: () => {
+      // Refresh comments list and bump commentsCount on the post
       qc.invalidateQueries({ queryKey: ['comments', postId] });
+      qc.setQueryData<Post>(['post', postId], (old) =>
+        old ? { ...old, commentsCount: old.commentsCount + 1 } : old
+      );
     },
   });
 }

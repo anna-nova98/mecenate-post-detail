@@ -18,9 +18,12 @@ export function Avatar({ uri, size = 40, displayName }: Props) {
         .toUpperCase()
     : '?';
 
+  // React Native cannot render .webm (video) as an image — fall back to initials
+  const isRenderable = uri && !uri.endsWith('.webm') && !uri.endsWith('.mp4');
+
   return (
     <View style={[styles.container, { width: size, height: size, borderRadius: size / 2 }]}>
-      {uri ? (
+      {isRenderable ? (
         <Image
           source={{ uri }}
           style={{ width: size, height: size, borderRadius: size / 2 }}
