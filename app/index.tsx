@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
 import {
   FlatList,
   View,
@@ -7,16 +7,25 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import { usePosts } from '../src/api/posts';
 import { PostCard } from '../src/components/PostCard';
 import { TabFilter, type FilterTab } from '../src/components/TabFilter';
+import { SkeletonCard } from '../src/components/SkeletonCard';
+import { LiveDot } from '../src/components/LiveDot';
 import { colors, spacing, typography } from '../src/theme/tokens';
 import type { Post } from '../src/types/api';
 
 export default function FeedScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const [filter, setFilter] = useState<FilterTab>('all');
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => <LiveDot />,
+    });
+  }, [navigation]);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch, isRefetching } =
     usePosts(filter);
@@ -45,9 +54,14 @@ export default function FeedScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} size="large" />
-      </View>
+      <FlatList
+        data={[1, 2, 3]}
+        keyExtractor={(i) => String(i)}
+        renderItem={() => <SkeletonCard />}
+        ListHeaderComponent={<TabFilter active={filter} onChange={setFilter} />}
+        contentContainerStyle={styles.list}
+        scrollEnabled={false}
+      />
     );
   }
 

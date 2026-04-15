@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   FlatList,
   ActivityIndicator,
   StyleSheet,
-  ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { observer } from 'mobx-react-lite';
@@ -53,7 +52,7 @@ const PostDetailScreen = observer(() => {
     }
   }, [post, id]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (post?.title) {
       navigation.setOptions({ title: post.title });
     }
@@ -97,7 +96,7 @@ const PostDetailScreen = observer(() => {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const renderComment = useCallback(
-    ({ item, index }: { item: Comment; index: number }) => {
+    ({ item }: { item: Comment }) => {
       const isNew = liveComments.some((c) => c.id === item.id);
       return <CommentItem comment={item} isNew={isNew} />;
     },
