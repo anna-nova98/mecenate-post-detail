@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { Pressable } from 'react-native';
 import { observer } from 'mobx-react-lite';
 import { Avatar } from './Avatar';
 import { TierBadge } from './TierBadge';
@@ -17,50 +23,68 @@ export const PostCard = observer(function PostCard({ post, onPress }: Props) {
   const likesCount = liveState?.likesCount ?? post.likesCount;
   const liveCommentCount =
     post.commentsCount + postStore.getLiveComments(post.id).length;
+
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
-      {/* Cover */}
-      {post.coverUrl ? (
-        <Image source={{ uri: post.coverUrl }} style={styles.cover} resizeMode="cover" />
-      ) : null}
-
-      <View style={styles.body}>
-        {/* Author row */}
-        <View style={styles.authorRow}>
-          <Avatar uri={post.author.avatarUrl} size={32} displayName={post.author.displayName} />
-          <View style={styles.authorInfo}>
-            <View style={styles.nameRow}>
-              <Text style={styles.authorName} numberOfLines={1}>
-                {post.author.displayName}
-              </Text>
-              {post.author.isVerified && (
-                <Text style={styles.verified}>✓</Text>
-              )}
-            </View>
-            <Text style={styles.date}>{formatDate(post.createdAt)}</Text>
-          </View>
-          <TierBadge tier={post.tier} />
-        </View>
-
-        {/* Title */}
-        <Text style={styles.title} numberOfLines={2}>
-          {post.title}
-        </Text>
-
-        {/* Preview */}
-        {post.preview ? (
-          <Text style={styles.preview} numberOfLines={3}>
-            {post.preview}
-          </Text>
+    <Animated.View style={[styles.card, animatedStyle]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={() => {
+          scale.value = withSpring(0.97, { damping: 15, stiffness: 400 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 12, stiffness: 300 });
+        }}
+        android_ripple={{ color: colors.borderLight }}
+      >
+        {/* Cover */}
+        {post.coverUrl ? (
+          <Image source={{ uri: post.coverUrl }} style={styles.cover} resizeMode="cover" />
         ) : null}
 
-        {/* Stats */}
-        <View style={styles.stats}>
-          <Text style={styles.stat}>♥ {likesCount}</Text>
-          <Text style={styles.stat}>💬 {liveCommentCount}</Text>
+        <View style={styles.body}>
+          {/* Author row */}
+          <View style={styles.authorRow}>
+            <Avatar uri={post.author.avatarUrl} size={32} displayName={post.author.displayName} />
+            <View style={styles.authorInfo}>
+              <View style={styles.nameRow}>
+                <Text style={styles.authorName} numberOfLines={1}>
+                  {post.author.displayName}
+                </Text>
+                {post.author.isVerified && (
+                  <Text style={styles.verified}>✓</Text>
+                )}
+              </View>
+              <Text style={styles.date}>{formatDate(post.createdAt)}</Text>
+            </View>
+            <TierBadge tier={post.tier} />
+          </View>
+
+          {/* Title */}
+          <Text style={styles.title} numberOfLines={2}>
+            {post.title}
+          </Text>
+
+          {/* Preview */}
+          {post.preview ? (
+            <Text style={styles.preview} numberOfLines={3}>
+              {post.preview}
+            </Text>
+          ) : null}
+
+          {/* Stats */}
+          <View style={styles.stats}>
+            <Text style={styles.stat}>♥ {likesCount}</Text>
+            <Text style={styles.stat}>💬 {liveCommentCount}</Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </Pressable>
+    </Animated.View>
   );
 });
 
