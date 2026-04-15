@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -32,6 +32,15 @@ export function TabFilter({ active, onChange }: Props) {
     transform: [{ translateX: pillX.value }],
     width: pillWidth.value,
   }));
+
+  // Animate pill when active tab changes externally (e.g. programmatic reset)
+  useEffect(() => {
+    const layout = tabLayouts.current[active];
+    if (layout && measured) {
+      pillX.value = withSpring(layout.x, { damping: 20, stiffness: 300 });
+      pillWidth.value = withSpring(layout.width, { damping: 20, stiffness: 300 });
+    }
+  }, [active, measured]);
 
   const handleLayout = (key: FilterTab) => (e: LayoutChangeEvent) => {
     const { x, width } = e.nativeEvent.layout;

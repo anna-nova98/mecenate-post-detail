@@ -24,6 +24,7 @@ export function usePosts(tier: TierFilter) {
 // ─── Post Detail ─────────────────────────────────────────────────────────────
 
 export function usePost(id: string) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ['post', id],
     queryFn: async () => {
@@ -31,6 +32,22 @@ export function usePost(id: string) {
       return res.data.data.post;
     },
     enabled: !!id,
+    // Seed from any feed cache page so the detail screen renders instantly
+    // without a skeleton when the post was already visible in the feed.
+    initialData: () => {
+      const tiers: TierFilter[] = ['all', 'free', 'paid'];
+      for (const tier of tiers) {
+        const feed = qc.getQueryData<{ pages: PostsData[] }>(['posts', tier]);
+        if (!feed) continue;
+        for (const page of feed.pages) {
+          const found = page.posts.find((p) => p.id === id);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    },
+    // Treat seeded data as stale immediately so a fresh fetch still runs
+    initialDataUpdatedAt: 0,
   });
 }
 
@@ -91,12 +108,70 @@ export function useAddComment(postId: string) {
       );
       return res.data.data.comment;
     },
-    onSuccess: () => {
-      // Refresh comments list and bump commentsCount on the post
-      qc.invalidateQueries({ queryKey: ['comments', postId] });
-      qc.setQueryData<Post>(['post', postId], (old) =>
-        old ? { ...old, commentsCount: old.commentsCount + 1 } : old
+    onMutate: async (text: string) => {
+      // Cancel any in-flight comment fetches
+      await qc.cancelQueries({ queryKey: ['comments', postId] });
+
+      // Snapshot for rollback
+      const prevComments = qc.getQueryData(['comments', postId]);
+      const prevPost = qc.getQueryData<Post>(['post', postId]);
+
+      // Build a temporary optimistic comment
+      const optimisticComment: Comment = {
+        id: `optimistic-${Date.now()}`,
+        postId,
+        author: {
+          id: 'me',
+          username: 'me',
+          displayName: 'Вы',
+          avatarUrl: '',
+          bio: '',
+          subscribersCount: 0,
+          isVerified: false,
+        },
+        text,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Prepend to the first page of the comments cache
+      qc.setQueryData<{ pages: CommentsData[]; pageParams: unknown[] }>(
+        ['comments', postId],
+        (old) => {
+          if (!old) return old;
+          const [firstPage, ...rest] = old.pages;
+          return {
+            ...old,
+            pages: [
+              { ...firstPage, comments: [optimisticComment, ...firstPage.comments] },
+              ...rest,
+            ],
+          };
+        }
       );
+
+      // Bump commentsCount optimistically
+      if (prevPost) {
+        qc.setQueryData<Post>(['post', postId], {
+          ...prevPost,
+          commentsCount: prevPost.commentsCount + 1,
+        });
+      }
+
+      return { prevComments, prevPost, optimisticComment };
+    },
+    onError: (_err, _vars, ctx) => {
+      // Roll back both caches on failure
+      if (ctx?.prevComments !== undefined) {
+        qc.setQueryData(['comments', postId], ctx.prevComments);
+      }
+      if (ctx?.prevPost !== undefined) {
+        qc.setQueryData(['post', postId], ctx.prevPost);
+      }
+    },
+    onSuccess: (_comment, _vars, ctx) => {
+      // Replace the optimistic entry with the real one from the server
+      // by invalidating — React Query will refetch and deduplicate
+      qc.invalidateQueries({ queryKey: ['comments', postId] });
     },
   });
 }
