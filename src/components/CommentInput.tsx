@@ -6,9 +6,13 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius, typography } from '../theme/tokens';
 
@@ -24,12 +28,22 @@ export function CommentInput({ onSubmit }: Props) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
 
+  const sendScale = useSharedValue(1);
+  const animatedSendStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: sendScale.value }],
+  }));
+
   const trimmed = text.trim();
   const canSend = trimmed.length > 0 && !loading;
   const nearLimit = text.length > MAX_LENGTH * 0.8;
+  const atLimit = text.length >= MAX_LENGTH;
 
   const handleSend = async () => {
     if (!canSend) return;
+    // Button press animation
+    sendScale.value = withSpring(0.85, { damping: 6 }, () => {
+      sendScale.value = withSpring(1, { damping: 10 });
+    });
     setLoading(true);
     try {
       await onSubmit(trimmed);
@@ -41,29 +55,32 @@ export function CommentInput({ onSubmit }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+    <View
+      style={[
+        styles.container,
+        { paddingBottom: Math.max(insets.bottom, spacing.sm) + spacing.sm },
+      ]}
     >
-      <View style={[styles.container, { paddingBottom: insets.bottom + spacing.sm }]}>
-        <TextInput
-          ref={inputRef}
-          style={styles.input}
-          value={text}
-          onChangeText={setText}
-          placeholder="Написать комментарий..."
-          placeholderTextColor={colors.textMuted}
-          multiline
-          maxLength={MAX_LENGTH}
-          blurOnSubmit
-          onSubmitEditing={handleSend}
-        />
-        <View style={styles.right}>
-          {nearLimit && (
-            <Text style={[styles.counter, text.length >= MAX_LENGTH && styles.counterLimit]}>
-              {MAX_LENGTH - text.length}
-            </Text>
-          )}
+      <TextInput
+        ref={inputRef}
+        style={styles.input}
+        value={text}
+        onChangeText={setText}
+        placeholder="Написать комментарий..."
+        placeholderTextColor={colors.textMuted}
+        multiline
+        maxLength={MAX_LENGTH}
+        returnKeyType="send"
+        blurOnSubmit={false}
+        onSubmitEditing={handleSend}
+      />
+      <View style={styles.right}>
+        {nearLimit && (
+          <Text style={[styles.counter, atLimit && styles.counterLimit]}>
+            {MAX_LENGTH - text.length}
+          </Text>
+        )}
+        <Animated.View style={animatedSendStyle}>
           <TouchableOpacity
             style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
             onPress={handleSend}
@@ -73,12 +90,12 @@ export function CommentInput({ onSubmit }: Props) {
             {loading ? (
               <ActivityIndicator size="small" color={colors.textPrimary} />
             ) : (
-              <Text style={styles.sendIcon}>➤</Text>
+              <Text style={[styles.sendIcon, !canSend && styles.sendIconDisabled]}>➤</Text>
             )}
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -89,8 +106,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderLight,
     backgroundColor: colors.bg,
   },
   input: {
@@ -98,7 +115,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgInput,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
     color: colors.textPrimary,
     ...typography.body,
     maxHeight: 100,
@@ -108,6 +125,7 @@ const styles = StyleSheet.create({
   right: {
     alignItems: 'center',
     gap: spacing.xs,
+    paddingBottom: Platform.OS === 'ios' ? 2 : 0,
   },
   counter: {
     ...typography.caption,
@@ -126,9 +144,14 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: {
     backgroundColor: colors.bgInput,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   sendIcon: {
     color: colors.textPrimary,
     fontSize: 16,
+  },
+  sendIconDisabled: {
+    color: colors.textMuted,
   },
 });

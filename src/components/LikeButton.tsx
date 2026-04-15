@@ -1,10 +1,13 @@
-import React, { useEffect } from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { TouchableOpacity, StyleSheet, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSequence,
   withSpring,
+  withTiming,
+  FadeInDown,
+  FadeOutUp,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing, radius, typography } from '../theme/tokens';
@@ -18,35 +21,29 @@ interface Props {
 
 export function LikeButton({ isLiked, likesCount, onPress, disabled }: Props) {
   const scale = useSharedValue(1);
-  const countScale = useSharedValue(1);
+  const prevCountRef = useRef(likesCount);
+  const prevCount = prevCountRef.current;
+  const countChanged = prevCount !== likesCount;
+  const countIncreased = likesCount > prevCount;
+
+  // Track previous count for animation direction
+  useEffect(() => {
+    prevCountRef.current = likesCount;
+  }, [likesCount]);
 
   const animatedIconStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
-  const animatedCountStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: countScale.value }],
-  }));
-
-  // Animate when likesCount changes (real-time WS update)
-  useEffect(() => {
-    countScale.value = withSequence(
-      withSpring(1.3, { damping: 6 }),
-      withSpring(1, { damping: 8 })
-    );
-  }, [likesCount]);
-
   const handlePress = async () => {
     if (disabled) return;
-    // Haptic feedback
     await Haptics.impactAsync(
       isLiked ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium
     );
-    // Icon bounce animation
     scale.value = withSequence(
-      withSpring(1.4, { damping: 5, stiffness: 300 }),
-      withSpring(0.9, { damping: 8 }),
-      withSpring(1, { damping: 10 })
+      withSpring(1.45, { damping: 4, stiffness: 350 }),
+      withSpring(0.88, { damping: 8 }),
+      withSpring(1, { damping: 12 })
     );
     onPress();
   };
@@ -61,11 +58,30 @@ export function LikeButton({ isLiked, likesCount, onPress, disabled }: Props) {
       <Animated.Text style={[styles.icon, animatedIconStyle]}>
         {isLiked ? '❤️' : '🤍'}
       </Animated.Text>
-      <Animated.Text style={[styles.count, isLiked && styles.countActive, animatedCountStyle]}>
-        {likesCount}
-      </Animated.Text>
+
+      {/* Animated number ticker */}
+      <View style={styles.countContainer}>
+        <Animated.Text
+          key={likesCount}
+          entering={
+            countChanged
+              ? FadeInDown.duration(200).springify()
+              : undefined
+          }
+          exiting={FadeOutUp.duration(150)}
+          style={[styles.count, isLiked && styles.countActive]}
+        >
+          {formatCount(likesCount)}
+        </Animated.Text>
+      </View>
     </TouchableOpacity>
   );
+}
+
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
 }
 
 const styles = StyleSheet.create({
@@ -86,6 +102,11 @@ const styles = StyleSheet.create({
   },
   icon: {
     fontSize: 18,
+  },
+  countContainer: {
+    minWidth: 28,
+    overflow: 'hidden',
+    alignItems: 'flex-start',
   },
   count: {
     ...typography.label,

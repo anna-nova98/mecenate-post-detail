@@ -83,23 +83,66 @@ class WsService {
       if (event.type === 'like_updated') {
         // Update MobX store (post detail real-time)
         postStore.updateLikes(event.postId, event.likesCount);
-        // Also patch the React Query cache so feed cards update
+
+        // Patch single-post cache (detail screen)
         this.qc?.setQueryData<Post>(['post', event.postId], (old) =>
           old ? { ...old, likesCount: event.likesCount } : old
         );
+
+        // Patch infinite feed cache — iterate all pages
+        this._patchFeedPost(event.postId, (post) => ({
+          ...post,
+          likesCount: event.likesCount,
+        }));
       }
 
       if (event.type === 'comment_added') {
         // Update MobX store (post detail real-time)
         postStore.prependComment(event.postId, event.comment);
-        // Bump commentsCount in the post cache
+
+        // Bump commentsCount in the single-post cache
         this.qc?.setQueryData<Post>(['post', event.postId], (old) =>
           old ? { ...old, commentsCount: old.commentsCount + 1 } : old
         );
+
+        // Bump commentsCount in the infinite feed cache
+        this._patchFeedPost(event.postId, (post) => ({
+          ...post,
+          commentsCount: post.commentsCount + 1,
+        }));
       }
     } catch {
       // ignore malformed messages
     }
+  }
+
+  /**
+   * Patches a post inside all active infinite feed query caches.
+   * The feed uses useInfiniteQuery with key ['posts', tier], so we
+   * iterate all matching cache entries and update the post in-place.
+   */
+  private _patchFeedPost(postId: string, updater: (post: Post) => Post) {
+    if (!this.qc) return;
+    const cache = this.qc.getQueryCache();
+    cache.getAll().forEach((query) => {
+      const key = query.queryKey;
+      // Match ['posts', *] infinite queries
+      if (Array.isArray(key) && key[0] === 'posts') {
+        this.qc!.setQueryData<{ pages: { posts: Post[]; nextCursor: string | null; hasMore: boolean }[] }>(
+          key,
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page) => ({
+                ...page,
+                posts: page.posts.map((p) => (p.id === postId ? updater(p) : p)),
+              })),
+            };
+          }
+        );
+      }
+    });
   }
 
   private _scheduleReconnect() {

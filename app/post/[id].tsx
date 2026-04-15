@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
@@ -44,7 +46,8 @@ const PostDetailScreen = observer(() => {
 
   const likesCount = liveState?.likesCount ?? post?.likesCount ?? 0;
   const isLiked = liveState?.isLiked ?? post?.isLiked ?? false;
-  // Live comment count = paginated base + new WS comments not yet in paginated list
+
+  // Merge paginated + live comments, deduplicating by id
   const paginatedComments = useMemo(
     () => commentsData?.pages.flatMap((p) => p.comments) ?? [],
     [commentsData]
@@ -94,6 +97,7 @@ const PostDetailScreen = observer(() => {
       const result = await likeMutation.mutateAsync();
       postStore.setLiked(id, result.isLiked, result.likesCount);
     } catch {
+      // Roll back optimistic update
       postStore.setLiked(id, isLiked, likesCount);
     }
   }, [id, isLiked, likesCount, likeMutation]);
@@ -163,7 +167,7 @@ const PostDetailScreen = observer(() => {
           <PaywallBox />
         )}
 
-        {/* Actions */}
+        {/* Actions row */}
         <View style={styles.actions}>
           <LikeButton
             isLiked={isLiked}
@@ -182,7 +186,11 @@ const PostDetailScreen = observer(() => {
   );
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+    >
       <FlatList
         data={allComments}
         keyExtractor={(item) => item.id}
@@ -197,7 +205,7 @@ const PostDetailScreen = observer(() => {
         }
         ListEmptyComponent={
           commentsLoading ? (
-            <View style={styles.center}>
+            <View style={styles.commentsLoading}>
               <ActivityIndicator color={colors.primary} />
             </View>
           ) : (
@@ -211,12 +219,13 @@ const PostDetailScreen = observer(() => {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         windowSize={5}
         maxToRenderPerBatch={10}
         initialNumToRender={10}
       />
       <CommentInput onSubmit={handleAddComment} />
-    </View>
+    </KeyboardAvoidingView>
   );
 });
 
@@ -291,9 +300,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderLight,
   },
   commentCountBadge: {
     paddingHorizontal: spacing.md,
@@ -305,6 +314,7 @@ const styles = StyleSheet.create({
   },
   commentCountText: { ...typography.label, color: colors.textSecondary },
   commentsHeader: { ...typography.h2, color: colors.textPrimary, marginTop: spacing.sm },
+  commentsLoading: { paddingVertical: spacing.xl, alignItems: 'center' },
   loadingMore: { paddingVertical: spacing.xl, alignItems: 'center' },
   emptyComments: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xl },
   emptyText: { ...typography.body, color: colors.textMuted },
