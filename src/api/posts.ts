@@ -168,10 +168,24 @@ export function useAddComment(postId: string) {
         qc.setQueryData(['post', postId], ctx.prevPost);
       }
     },
-    onSuccess: (_comment, _vars, ctx) => {
-      // Replace the optimistic entry with the real one from the server
-      // by invalidating — React Query will refetch and deduplicate
-      qc.invalidateQueries({ queryKey: ['comments', postId] });
+    onSuccess: (comment, _vars, ctx) => {
+      // Replace the optimistic entry in-place with the real server comment —
+      // avoids the flash caused by invalidation + refetch
+      qc.setQueryData<{ pages: CommentsData[]; pageParams: unknown[] }>(
+        ['comments', postId],
+        (old) => {
+          if (!old || !ctx?.optimisticComment) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              comments: page.comments.map((c) =>
+                c.id === ctx.optimisticComment.id ? comment : c
+              ),
+            })),
+          };
+        }
+      );
     },
   });
 }

@@ -1,11 +1,10 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, Image, StyleSheet, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { Pressable } from 'react-native';
 import { observer } from 'mobx-react-lite';
 import { Avatar } from './Avatar';
 import { TierBadge } from './TierBadge';
@@ -30,16 +29,20 @@ export const PostCard = observer(function PostCard({ post, onPress }: Props) {
     transform: [{ scale: scale.value }],
   }));
 
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.97, { damping: 15, stiffness: 400 });
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 12, stiffness: 300 });
+  }, [scale]);
+
   return (
     <Animated.View style={[styles.card, animatedStyle]}>
       <Pressable
         onPress={onPress}
-        onPressIn={() => {
-          scale.value = withSpring(0.97, { damping: 15, stiffness: 400 });
-        }}
-        onPressOut={() => {
-          scale.value = withSpring(1, { damping: 12, stiffness: 300 });
-        }}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         android_ripple={{ color: colors.borderLight }}
       >
         {/* Cover */}
