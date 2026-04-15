@@ -11,10 +11,13 @@ interface Props {
 }
 
 export function CommentItem({ comment, isNew }: Props) {
+  // Optimistic comments (prepended before server confirms) should also animate in
+  const isOptimistic = comment.id.startsWith('optimistic-');
+  const shouldAnimate = isNew || isOptimistic;
   return (
     <Animated.View
-      entering={isNew ? FadeInDown.duration(300).springify() : undefined}
-      style={styles.container}
+      entering={shouldAnimate ? FadeInDown.duration(300).springify() : undefined}
+      style={[styles.container, isOptimistic && styles.containerPending]}
     >
       <Avatar uri={comment.author.avatarUrl} size={36} displayName={comment.author.displayName} />
       <View style={styles.bubble}>
@@ -40,6 +43,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+  },
+  containerPending: {
+    opacity: 0.6,
   },
   bubble: {
     flex: 1,
