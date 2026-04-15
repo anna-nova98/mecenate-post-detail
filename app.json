@@ -25,6 +25,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "scheme": "mecenate",
+    "plugins": [
+      "expo-router",
+      "react-native-reanimated"
+    ]
   }
 }
