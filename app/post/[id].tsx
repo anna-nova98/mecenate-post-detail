@@ -21,6 +21,7 @@ import { LikeButton } from '../../src/components/LikeButton';
 import { CommentItem } from '../../src/components/CommentItem';
 import { CommentInput } from '../../src/components/CommentInput';
 import { ErrorView } from '../../src/components/ErrorView';
+import { SkeletonDetail } from '../../src/components/SkeletonCard';
 import { colors, spacing, radius, typography } from '../../src/theme/tokens';
 import type { Comment } from '../../src/types/api';
 
@@ -122,8 +123,8 @@ const PostDetailScreen = observer(() => {
 
   if (postLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} size="large" />
+      <View style={styles.screen}>
+        <SkeletonDetail />
       </View>
     );
   }
