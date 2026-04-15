@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, type ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,7 +9,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { colors, spacing, radius } from '../theme/tokens';
 
-function Bone({ width, height, style }: { width: number | string; height: number; style?: object }) {
+interface BoneProps {
+  width: ViewStyle['width'];
+  height: number;
+  style?: ViewStyle;
+}
+
+function Bone({ width, height, style }: BoneProps) {
   const opacity = useSharedValue(1);
 
   useEffect(() => {
@@ -25,7 +31,7 @@ function Bone({ width, height, style }: { width: number | string; height: number
   return (
     <Animated.View
       style={[
-        { width: width as number, height, borderRadius: radius.sm, backgroundColor: colors.bgInput },
+        { width, height, borderRadius: radius.sm, backgroundColor: colors.bgInput },
         animStyle,
         style,
       ]}
@@ -40,7 +46,7 @@ export function SkeletonCard() {
       <View style={styles.body}>
         <View style={styles.row}>
           <Bone width={36} height={36} style={{ borderRadius: 18 }} />
-          <View style={{ gap: 6, flex: 1 }}>
+          <View style={styles.authorLines}>
             <Bone width="50%" height={12} />
             <Bone width="30%" height={10} />
           </View>
@@ -69,5 +75,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  authorLines: {
+    flex: 1,
+    gap: 6,
   },
 });

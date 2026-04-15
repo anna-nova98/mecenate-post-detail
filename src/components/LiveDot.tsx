@@ -5,7 +5,9 @@ import Animated, {
   useAnimatedStyle,
   withRepeat,
   withTiming,
+  cancelAnimation,
 } from 'react-native-reanimated';
+import { reaction } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import { wsStatusStore } from '../stores/wsStatusStore';
 import { colors, spacing, typography } from '../theme/tokens';
@@ -14,12 +16,21 @@ export const LiveDot = observer(() => {
   const opacity = useSharedValue(1);
 
   useEffect(() => {
-    if (wsStatusStore.connected) {
-      opacity.value = withRepeat(withTiming(0.2, { duration: 900 }), -1, true);
-    } else {
-      opacity.value = 1;
-    }
-  }, [wsStatusStore.connected]);
+    // React to MobX observable changes with reaction()
+    const dispose = reaction(
+      () => wsStatusStore.connected,
+      (connected) => {
+        cancelAnimation(opacity);
+        if (connected) {
+          opacity.value = withRepeat(withTiming(0.2, { duration: 900 }), -1, true);
+        } else {
+          opacity.value = withTiming(1, { duration: 200 });
+        }
+      },
+      { fireImmediately: true }
+    );
+    return dispose;
+  }, []);
 
   const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 

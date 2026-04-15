@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useCallback, useLayoutEffect, useRef } from 'react';
 import {
   FlatList,
   View,
@@ -22,6 +22,7 @@ export default function FeedScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const [filter, setFilter] = useState<FilterTab>('all');
+  const listRef = useRef<FlatList<Post>>(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerRight: () => <LiveDot /> });
@@ -40,6 +41,15 @@ export default function FeedScreen() {
 
   const posts = data?.pages.flatMap((p) => p.posts) ?? [];
 
+  const handleFilterChange = useCallback(
+    (tab: FilterTab) => {
+      setFilter(tab);
+      // Scroll to top when switching tabs
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    },
+    []
+  );
+
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
@@ -51,12 +61,15 @@ export default function FeedScreen() {
     [router]
   );
 
-  const renderFooter = () =>
-    isFetchingNextPage ? (
-      <View style={styles.footer}>
-        <ActivityIndicator color={colors.primary} />
-      </View>
-    ) : null;
+  const renderFooter = useCallback(
+    () =>
+      isFetchingNextPage ? (
+        <View style={styles.footer}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : null,
+    [isFetchingNextPage]
+  );
 
   if (isLoading) {
     return (
@@ -64,7 +77,7 @@ export default function FeedScreen() {
         data={[1, 2, 3]}
         keyExtractor={(i) => String(i)}
         renderItem={() => <SkeletonCard />}
-        ListHeaderComponent={<TabFilter active={filter} onChange={setFilter} />}
+        ListHeaderComponent={<TabFilter active={filter} onChange={handleFilterChange} />}
         contentContainerStyle={styles.list}
         scrollEnabled={false}
       />
@@ -77,10 +90,12 @@ export default function FeedScreen() {
 
   return (
     <FlatList
+      ref={listRef}
       data={posts}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-      ListHeaderComponent={<TabFilter active={filter} onChange={setFilter} />}
+      extraData={filter}
+      ListHeaderComponent={<TabFilter active={filter} onChange={handleFilterChange} />}
       ListEmptyComponent={
         <View style={styles.empty}>
           <Text style={styles.emptyText}>Публикаций нет</Text>
