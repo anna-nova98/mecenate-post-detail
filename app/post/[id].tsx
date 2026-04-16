@@ -264,7 +264,6 @@ function formatDate(iso: string) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   list: { paddingBottom: spacing.xl },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   cover: { width: '100%', height: 260 },
   content: { padding: spacing.lg, gap: spacing.md },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

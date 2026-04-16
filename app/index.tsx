@@ -54,11 +54,16 @@ export default function FeedScreen() {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const handlePostPress = useCallback(
+    (id: string) => router.push(`/post/${id}`),
+    [router]
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: Post }) => (
-      <PostCard post={item} onPress={() => router.push(`/post/${item.id}`)} />
+      <PostCard post={item} onPress={() => handlePostPress(item.id)} />
     ),
-    [router]
+    [handlePostPress]
   );
 
   const renderFooter = useCallback(
