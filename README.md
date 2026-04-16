@@ -2,10 +2,6 @@
 
 React Native + Expo mobile app for the Mecenate content platform.
 
-## Screenshots
-
-Feed screen with tab filter, infinite scroll, and real-time WebSocket status indicator. Post detail with animated like button, lazy-loaded comments, and live updates.
-
 ---
 
 ## Stack
@@ -14,9 +10,9 @@ Feed screen with tab filter, infinite scroll, and real-time WebSocket status ind
 |---|---|
 | Mobile | React Native 0.81 + Expo SDK 54 (Expo Router v6) |
 | Language | TypeScript (strict) |
-| Server state | TanStack React Query v5 — infinite scroll, optimistic updates, caching |
+| Server state | TanStack React Query v5 — infinite scroll, optimistic updates, cache seeding |
 | Real-time state | MobX 6 — WebSocket events, live likes/comments |
-| Animations | React Native Reanimated v4 — spring like button, fade-in comments, skeleton shimmer |
+| Animations | React Native Reanimated v4 — spring cards, sliding tab pill, skeleton shimmer, number ticker |
 | Haptics | Expo Haptics — tactile feedback on like/unlike |
 | HTTP | Axios — interceptors for auth + error normalisation |
 | Storage | AsyncStorage — UUID token persistence |
@@ -28,27 +24,35 @@ Feed screen with tab filter, infinite scroll, and real-time WebSocket status ind
 
 ### Feed Screen
 - Infinite scroll with cursor-based pagination (10 posts/page)
-- Tab filter: **Все / Бесплатные / Платные**
+- Tab filter: **Все / Бесплатные / Платные** — animated sliding pill indicator
 - Pull-to-refresh
-- Skeleton loading placeholders (Reanimated shimmer)
-- Live WebSocket status dot in header (pulsing when connected)
-- Real-time like/comment count updates from WebSocket
+- Skeleton loading placeholders with synchronised shimmer (Reanimated)
+- Live WebSocket status dot in header — pulsing green when connected, smooth colour transition on state change
+- Real-time like/comment count updates from WebSocket on feed cards
+- Spring scale animation on card press (Reanimated + Pressable)
 
 ### Post Detail Screen
-- Full post content with cover image
-- Author info: avatar, display name, username, subscriber count, verified badge
+- Instant render from feed cache — no skeleton if post was already visible in feed
+- Full post content with cover image, author info, verified badge, subscriber count
 - Tier badge (free / paid) with paywall UI for locked content
-- **Like button** — spring animation (Reanimated), haptic feedback, animated number ticker
+- **Like button** — spring bounce animation, haptic feedback, directional number ticker (slides up on increment, down on decrement)
 - Optimistic like updates with server reconciliation and rollback on error
 - Comments list with lazy load (20/page, infinite scroll)
-- New real-time comments appear at the top with `FadeInDown` animation
-- Comment input with 500-char limit, character counter, keyboard-aware layout
+- **Optimistic comment submit** — comment appears immediately at 60% opacity, replaced in-place with server response (no flash/refetch)
+- New real-time comments (WebSocket) appear at top with `FadeInDown` animation
+- Comment input with 500-char limit, character counter, send button spring animation, keyboard-aware layout
 
 ### Real-time (WebSocket)
-- Auto-reconnect with exponential backoff (max 10 attempts)
+- Auto-reconnect with **exponential backoff** (2s → 4s → 8s → 16s → 30s, max 10 attempts)
 - Reconnects when app returns to foreground (AppState listener)
-- `like_updated` → updates MobX store + React Query cache (both feed and detail)
-- `comment_added` → prepends to MobX live comments, bumps count in cache
+- `like_updated` → patches MobX store + React Query single-post cache + all active feed page caches
+- `comment_added` → prepends to MobX live comments, bumps count in all caches
+
+### App-wide
+- Branded splash screen with animated wordmark and pulsing dot (Reanimated)
+- Offline detection banner — slides in from top when connectivity is lost, disappears on recovery
+- Dark theme throughout — `userInterfaceStyle: dark`, splash background matches app background (no white flash)
+- Avatar images fade in on load (Reanimated opacity transition), initials shown as fallback
 
 ---
 
@@ -65,7 +69,7 @@ cp .env.example .env
 | `EXPO_PUBLIC_API_URL` | `https://k8s.mectest.ru/test-app` | REST API base URL |
 | `EXPO_PUBLIC_WS_URL` | `wss://k8s.mectest.ru/test-app/ws` | WebSocket URL |
 
-The defaults point to the live test server, so the app works out of the box without any changes.
+The defaults point to the live test server — the app works out of the box without any changes.
 
 ---
 
@@ -79,17 +83,11 @@ The defaults point to the live test server, so the app works out of the box with
 
 ```bash
 cd mecenate
-
-# Install dependencies
 npm install
-
-# Start Expo dev server
 npx expo start
 ```
 
 Scan the QR code with **Expo Go** on your device.
-
-### Platform-specific
 
 ```bash
 # iOS simulator
@@ -106,31 +104,33 @@ npx expo start --android
 ```
 mecenate/
 ├── app/
-│   ├── _layout.tsx          # Root layout: QueryClient, auth init, WS connect
+│   ├── _layout.tsx          # Root layout: QueryClient, auth init, WS connect,
+│   │                        #   branded splash, offline banner
 │   ├── index.tsx            # Feed screen
 │   ├── post/[id].tsx        # Post detail screen
 │   └── +not-found.tsx       # 404 fallback
 ├── src/
 │   ├── api/
 │   │   ├── client.ts        # Axios instance with auth + error interceptors
-│   │   └── posts.ts         # React Query hooks: usePosts, usePost, useLikePost,
-│   │                        #   useComments, useAddComment
+│   │   └── posts.ts         # React Query hooks: usePosts, usePost (feed-seeded),
+│   │                        #   useLikePost, useComments, useAddComment (optimistic)
 │   ├── stores/
 │   │   ├── authStore.ts     # MobX: UUID token (generated once, persisted)
 │   │   ├── postStore.ts     # MobX: real-time likes/comments from WebSocket
 │   │   └── wsStatusStore.ts # MobX: WebSocket connection status
 │   ├── ws/
-│   │   └── wsService.ts     # WebSocket client: connect, reconnect, event dispatch
+│   │   └── wsService.ts     # WebSocket client: connect, exponential backoff,
+│   │                        #   event dispatch to MobX + React Query caches
 │   ├── components/
-│   │   ├── Avatar.tsx       # User avatar with initials fallback
+│   │   ├── Avatar.tsx       # Avatar with initials fallback + fade-in on load
 │   │   ├── TierBadge.tsx    # Free / Paid badge
-│   │   ├── PostCard.tsx     # Feed card (MobX observer for live counts)
-│   │   ├── LikeButton.tsx   # Reanimated spring + haptics + number ticker
-│   │   ├── CommentItem.tsx  # Comment row with FadeInDown for new items
-│   │   ├── CommentInput.tsx # Text input with char limit + send animation
-│   │   ├── TabFilter.tsx    # All / Free / Paid tab bar
-│   │   ├── LiveDot.tsx      # WS status indicator (pulsing dot)
-│   │   ├── SkeletonCard.tsx # Shimmer loading placeholder
+│   │   ├── PostCard.tsx     # Feed card — MobX observer, spring press animation
+│   │   ├── LikeButton.tsx   # Spring + haptics + directional number ticker
+│   │   ├── CommentItem.tsx  # Comment row — FadeInDown for new/optimistic items
+│   │   ├── CommentInput.tsx # Text input with char limit + send button animation
+│   │   ├── TabFilter.tsx    # Sliding pill tab bar (Reanimated)
+│   │   ├── LiveDot.tsx      # WS status dot — interpolated colour + pulse
+│   │   ├── SkeletonCard.tsx # Synchronised shimmer skeleton (feed + detail)
 │   │   └── ErrorView.tsx    # Error state with retry button
 │   ├── theme/
 │   │   └── tokens.ts        # Design tokens: colors, spacing, typography, radius
@@ -154,20 +154,29 @@ Each UUID has its own like state on the server.
 ## Architecture Notes
 
 ### State Management Strategy
-- **React Query** owns all server-fetched data (posts, comments). It handles caching, deduplication, background refetching, and pagination.
+- **React Query** owns all server-fetched data (posts, comments). Handles caching, deduplication, background refetching, and pagination.
 - **MobX** owns real-time overlay state — live like counts and new comments arriving via WebSocket. Components observe both layers and merge them.
-- **Optimistic updates** on like: MobX is updated immediately, the API mutation fires in the background, and on success the server's authoritative count is applied. On error, the previous state is restored.
+- **Optimistic updates** on like and comment: UI updates immediately, API fires in background, server response reconciles in-place. Rollback on error.
+
+### Feed → Detail Cache Seeding
+`usePost` checks all active feed query caches before making a network request. If the post was already loaded in the feed, the detail screen renders instantly with that data while a background fetch runs for the full post body.
 
 ### WebSocket → Cache Sync
 When a `like_updated` or `comment_added` event arrives, `wsService` updates:
-1. The MobX `postStore` (for the open detail screen)
+1. The MobX `postStore` (detail screen real-time state)
 2. The React Query single-post cache `['post', id]`
 3. All active infinite feed query caches `['posts', *]` — iterating pages to patch the matching post in-place
 
-This ensures feed cards reflect live counts even without navigating to the detail screen.
+Feed cards reflect live counts without requiring navigation to the detail screen.
+
+### Optimistic Comment Flow
+1. `onMutate`: snapshot caches, prepend optimistic comment, bump count
+2. Comment appears immediately at 60% opacity with `FadeInDown`
+3. `onSuccess`: replace optimistic entry in-place with real server comment — no invalidation, no flash
+4. `onError`: restore both snapshots
 
 ---
 
 ## Commit History
 
-Each feature step is committed separately. See `git log --oneline` for incremental progress.
+See `git log --oneline` for incremental progress — each step committed separately.
