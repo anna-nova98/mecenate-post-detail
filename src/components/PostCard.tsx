@@ -37,37 +37,35 @@ export const PostCard = observer(function PostCard({ post, onPress }: Props) {
     scale.value = withSpring(1, { damping: 12, stiffness: 300 });
   }, [scale]);
 
+  const isPaid = post.tier === 'paid';
+
   return (
     <Animated.View style={[styles.card, animatedStyle]}>
       <Pressable
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        android_ripple={{ color: colors.borderLight }}
+        android_ripple={{ color: colors.border }}
       >
-        {/* Cover */}
+        {/* Cover with optional paywall overlay */}
         {post.coverUrl ? (
-          <Image source={{ uri: post.coverUrl }} style={styles.cover} resizeMode="cover" />
+          <View style={styles.coverContainer}>
+            <Image source={{ uri: post.coverUrl }} style={styles.cover} resizeMode="cover" />
+            {isPaid && !post.body && (
+              <View style={styles.paywallOverlay}>
+                <View style={styles.paywallDot} />
+                <Text style={styles.paywallText}>
+                  Кто ещё не подписался на меня,{'\n'}поспешите оформить подписку
+                </Text>
+                <View style={styles.paywallBtn}>
+                  <Text style={styles.paywallBtnText}>Оформить подписку</Text>
+                </View>
+              </View>
+            )}
+          </View>
         ) : null}
 
         <View style={styles.body}>
-          {/* Author row */}
-          <View style={styles.authorRow}>
-            <Avatar uri={post.author.avatarUrl} size={32} displayName={post.author.displayName} />
-            <View style={styles.authorInfo}>
-              <View style={styles.nameRow}>
-                <Text style={styles.authorName} numberOfLines={1}>
-                  {post.author.displayName}
-                </Text>
-                {post.author.isVerified && (
-                  <Text style={styles.verified}>✓</Text>
-                )}
-              </View>
-              <Text style={styles.date}>{formatDate(post.createdAt)}</Text>
-            </View>
-            <TierBadge tier={post.tier} />
-          </View>
-
           {/* Title */}
           <Text style={styles.title} numberOfLines={2}>
             {post.title}
@@ -75,15 +73,26 @@ export const PostCard = observer(function PostCard({ post, onPress }: Props) {
 
           {/* Preview */}
           {post.preview ? (
-            <Text style={styles.preview} numberOfLines={3}>
+            <Text style={styles.preview} numberOfLines={2}>
               {post.preview}
             </Text>
           ) : null}
 
-          {/* Stats */}
-          <View style={styles.stats}>
+          {/* Stats row */}
+          <View style={styles.statsRow}>
             <Text style={styles.stat}>♥ {likesCount}</Text>
             <Text style={styles.stat}>💬 {liveCommentCount}</Text>
+          </View>
+
+          {/* Author row at bottom */}
+          <View style={styles.authorRow}>
+            <Avatar uri={post.author.avatarUrl} size={28} displayName={post.author.displayName} />
+            <Text style={styles.authorName} numberOfLines={1}>
+              {post.author.displayName}
+            </Text>
+            {post.author.isVerified && (
+              <Text style={styles.verified}>✓</Text>
+            )}
           </View>
         </View>
       </Pressable>
@@ -105,40 +114,48 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.card,
   },
+  coverContainer: {
+    position: 'relative',
+  },
   cover: {
     width: '100%',
-    height: 180,
+    height: 200,
+  },
+  paywallOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(80, 20, 160, 0.82)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  paywallDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  paywallText: {
+    ...typography.body,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  paywallBtn: {
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+  },
+  paywallBtnText: {
+    ...typography.label,
+    color: '#FFFFFF',
   },
   body: {
     padding: spacing.lg,
     gap: spacing.sm,
-  },
-  authorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  authorInfo: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  authorName: {
-    ...typography.label,
-    color: colors.textPrimary,
-    flexShrink: 1,
-  },
-  verified: {
-    color: colors.verified,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  date: {
-    ...typography.caption,
-    color: colors.textMuted,
   },
   title: {
     ...typography.h3,
@@ -148,13 +165,28 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
   },
-  stats: {
+  statsRow: {
     flexDirection: 'row',
     gap: spacing.lg,
-    marginTop: spacing.xs,
   },
   stat: {
     ...typography.bodySmall,
     color: colors.textMuted,
+  },
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  authorName: {
+    ...typography.caption,
+    color: colors.textMuted,
+    flexShrink: 1,
+  },
+  verified: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

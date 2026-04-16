@@ -128,7 +128,7 @@ export default function RootLayout() {
   if (!ready) {
     return (
       <>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <SplashScreen />
       </>
     );
@@ -136,13 +136,13 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       {offline && <OfflineBanner />}
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: colors.bg },
+          headerStyle: { backgroundColor: colors.bgCard },
           headerTintColor: colors.textPrimary,
-          headerTitleStyle: { fontWeight: '700' },
+          headerTitleStyle: { fontWeight: '700', color: colors.textPrimary },
           contentStyle: { backgroundColor: colors.bg },
           headerShadowVisible: false,
         }}

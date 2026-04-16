@@ -4,16 +4,16 @@ export const colors = {
   primaryLight: '#EDE9FE',
   primaryDark: '#5B21B6',
 
-  // Backgrounds
-  bg: '#0F0F0F',
-  bgCard: '#1A1A1A',
-  bgInput: '#262626',
-  bgOverlay: 'rgba(0,0,0,0.6)',
+  // Backgrounds — light theme matching Figma
+  bg: '#F5F5F5',
+  bgCard: '#FFFFFF',
+  bgInput: '#F0F0F0',
+  bgOverlay: 'rgba(0,0,0,0.5)',
 
   // Text
-  textPrimary: '#FFFFFF',
-  textSecondary: '#A3A3A3',
-  textMuted: '#525252',
+  textPrimary: '#111111',
+  textSecondary: '#555555',
+  textMuted: '#999999',
 
   // Accents
   like: '#EF4444',
@@ -23,8 +23,8 @@ export const colors = {
   free: '#10B981',
 
   // Borders
-  border: '#2A2A2A',
-  borderLight: '#3A3A3A',
+  border: '#E5E5E5',
+  borderLight: '#EEEEEE',
 
   // Status
   error: '#EF4444',
@@ -62,9 +62,9 @@ export const typography = {
 export const shadows = {
   card: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
 };
