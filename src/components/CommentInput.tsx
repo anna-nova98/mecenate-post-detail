@@ -88,7 +88,7 @@ export function CommentInput({ onSubmit }: Props) {
             activeOpacity={0.8}
           >
             {loading ? (
-              <ActivityIndicator size="small" color={colors.textPrimary} />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={[styles.sendIcon, !canSend && styles.sendIconDisabled]}>➤</Text>
             )}
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   sendIcon: {
-    color: colors.textPrimary,
+    color: '#FFFFFF',
     fontSize: 16,
   },
   sendIconDisabled: {

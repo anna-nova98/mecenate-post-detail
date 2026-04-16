@@ -6,6 +6,7 @@ import Animated, {
   withRepeat,
   withTiming,
   Easing,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { colors, spacing, radius } from '../theme/tokens';
 
@@ -23,7 +24,7 @@ function usePulse() {
 }
 
 interface BoneProps {
-  opacity: Animated.SharedValue<number>;
+  opacity: SharedValue<number>;
   width: ViewStyle['width'];
   height: number;
   style?: ViewStyle;

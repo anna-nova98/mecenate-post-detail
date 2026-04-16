@@ -45,6 +45,6 @@ const styles = StyleSheet.create({
   },
   btnText: {
     ...typography.label,
-    color: colors.textPrimary,
+    color: '#FFFFFF',
   },
 });

@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     backgroundColor: colors.primary,
   },
-  subscribeBtnText: { ...typography.label, color: colors.textPrimary },
+  subscribeBtnText: { ...typography.label, color: '#FFFFFF' },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
